@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Para mi preciosa 💘</title>
+  <style>
+    :root{
+      --bg1:#05000a;
+      --bg2:#0a0014;
+      --neon:#ff1b4d;
+      --card:#120018cc;
+      --cardBorder:#ff3d6a55;
+      --text:#fff7fb;
+      --muted:#f7b9c7;
+      --btn:#ff2a5a;
+      --btn2:#2a1b2f;
+      --shadow: 0 0 18px rgba(255, 27, 77, .35), 0 0 60px rgba(255, 27, 77, .18);
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      overflow:hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 30% 30%, #240021 0%, transparent 55%),
+        radial-gradient(900px 600px at 70% 65%, #120024 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    canvas{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+    }
+
+    .hud{
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:min(520px, calc(100vw - 28px));
+      pointer-events:none;
+      opacity:0;
+      transition: opacity .6s ease, transform .6s ease;
+      z-index:5;
+    }
+    .hud.show{
+      opacity:1;
+      transform:translate(-50%,-50%) scale(1.0);
+      pointer-events:auto;
+    }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--cardBorder);
+      border-radius:18px;
+      padding:22px 20px 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:20px;
+      letter-spacing:.2px;
+      margin:0 0 10px;
+    }
+    .heartBadge{
+      width:28px;height:28px;border-radius:10px;
+      display:grid;place-items:center;
+      background: rgba(255,27,77,.18);
+      border:1px solid rgba(255,27,77,.35);
+      box-shadow: 0 0 18px rgba(255,27,77,.25);
+    }
+    .msg{
+      margin:0 0 16px;
+      line-height:1.42;
+      color: var(--muted);
+      font-size:16px;
+    }
+    .msg b{ color: var(--text); }
+
+    .btnRow{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-top:8px;
+      position:relative;
+    }
+
+    button{
+      border:0;
+      cursor:pointer;
+      border-radius:14px;
+      padding:12px 18px;
+      font-size:16px;
+      font-weight:650;
+      letter-spacing:.2px;
+      transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #yesBtn{
+      background: linear-gradient(180deg, #ff3b67, var(--btn));
+      color:white;
+      box-shadow: 0 0 16px rgba(255, 27, 77, .35);
+    }
+    #yesBtn:hover{ filter:brightness(1.05); transform: translateY(-1px); }
+    #yesBtn:active{ transform: translateY(1px) scale(.99); }
+
+    #noBtn{
+      background: linear-gradient(180deg, #2f1a34, var(--btn2));
+      color:#ffe7ef;
+      box-shadow: 0 0 14px rgba(255, 255, 255, .06);
+      position:relative;
+    }
+
+    .hint{
+      margin-top:10px;
+      text-align:center;
+      font-size:12px;
+      color:#ffd0dcaa;
+    }
+
+    .footerGlow{
+      height:2px;
+      margin-top:14px;
+      border-radius:999px;
+      background: linear-gradient(90deg, transparent, rgba(255,27,77,.55), transparent);
+      filter: blur(.2px);
+    }
+
+    /* ========= Photo layer ========= */
+    #photoLayer{
+      position:fixed;
+      inset:0;
+      z-index:4;
+      pointer-events:none;
+    }
+
+    .photoFrame{
+      position:absolute;
+      width:min(260px, 46vw);
+      max-width:260px;
+      aspect-ratio: 4 / 3;
+      border-radius:16px;
+      overflow:hidden;
+      background: rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.75);
+      box-shadow:
+        0 0 18px rgba(255,255,255,0.35),
+        0 0 40px rgba(255,255,255,0.22),
+        0 0 70px rgba(255,255,255,0.12);
+      backdrop-filter: blur(6px);
+      opacity:0;
+      transform: translateY(10px) scale(0.98);
+      transition: opacity .9s ease, transform .9s ease;
+    }
+
+    .photoFrame.show{
+      opacity:1;
+      transform: translateY(0) scale(1);
+    }
+
+    .photoFrame.hide{
+      opacity:0;
+      transform: translateY(10px) scale(0.985);
+      transition: opacity .8s ease, transform .8s ease;
+    }
+
+    .photoFrame img{
+      width:100%;
+      height:100%;
+      object-fit: contain;
+      background: rgba(0,0,0,0.35);
+      display:block;
+      filter: saturate(1.03) contrast(1.03);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="hud" id="hud" aria-hidden="true">
+    <div class="card">
+      <h1 class="title">
+        <span class="heartBadge">💌</span>
+        Para mí preciosa
+      </h1>
+      <p class="msg" id="question">
+        Preciosa… ¿quieres ser mí San Valentín este <b>14 de febrero</b>? 💖
+      </p>
+
+      <div class="btnRow" id="btnRow">
+        <button id="yesBtn" type="button">Sí 💘</button>
+        <button id="noBtn" type="button">No 🥺</button>
+      </div>
+
+      <div class="hint">Puedes intentar decir que no, a ver si puedes 👀</div>
+      <div class="footerGlow"></div>
+    </div>
+  </div>
+
+  <div id="photoLayer" aria-hidden="true"></div>
+
+  <!-- Música de fondo (pon "Cancion.mp3" en la misma carpeta que este HTML) -->
+  <audio id="bgMusic" src="Cancion.mp3" loop autoplay preload="auto"></audio>
+
+  <script>
+    // ========= Canvas setup =========
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d", { alpha: true });
+
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    function resize() {
+      canvas.width = Math.floor(innerWidth * DPR);
+      canvas.height = Math.floor(innerHeight * DPR);
+      canvas.style.width = innerWidth + "px";
+      canvas.style.height = innerHeight + "px";
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    addEventListener("resize", resize);
+    resize();
+
+    // ========= Heart point generation (parametric heart) =========
+    function heartXY(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+      return { x, y };
+    }
+
+    function buildHeartPoints(count = 1700) {
+      const pts = [];
+      for (let i = 0; i < count; i++) {
+        const t = (i / count) * Math.PI * 2;
+        let { x, y } = heartXY(t);
+
+        const jitter = 0.55;
+        x += (Math.random() - 0.5) * jitter * 6;
+        y += (Math.random() - 0.5) * jitter * 6;
+
+        pts.push({ x, y });
+      }
+      return pts;
+    }
+
+    const basePoints = buildHeartPoints(2000);
+
+    function heartToScreen(p) {
+      const cx = innerWidth * 0.5;
+      const cy = innerHeight * 0.46;
+      const s = Math.min(innerWidth, innerHeight) / 40;
+      return { x: cx + p.x * s, y: cy - p.y * s };
+    }
+
+    // ========= Neon particles for heart =========
+    const heartParticles = [];
+    const MAX_HEART = basePoints.length;
+
+    function addHeartParticle(i) {
+      const p = basePoints[i];
+      const sp = heartToScreen(p);
+      heartParticles.push({
+        x: sp.x + (Math.random() - 0.5) * 6,
+        y: sp.y + (Math.random() - 0.5) * 6,
+        tx: sp.x,
+        ty: sp.y,
+        r: 1 + Math.random() * 2.2,
+        a: 0,
+        va: 0.02 + Math.random() * 0.03,
+        wob: Math.random() * Math.PI * 2,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    let revealIndex = 0;
+    const REVEAL_SPEED = 6;
+
+    // ========= Confetti hearts =========
+    const confetti = [];
+    function spawnConfettiHearts(n = 160) {
+      const colors = ["#ff2a5a","#ff6bcb","#ff7a2f","#ffd166","#7cffcb","#48b8ff","#b983ff","#ffffff"];
+      for (let i = 0; i < n; i++) {
+        confetti.push({
+          x: innerWidth * 0.5 + (Math.random() - 0.5) * 40,
+          y: innerHeight * 0.48 + (Math.random() - 0.5) * 20,
+          vx: (Math.random() - 0.5) * 7,
+          vy: -6 - Math.random() * 7,
+          g: 0.18 + Math.random() * 0.12,
+          rot: Math.random() * Math.PI * 2,
+          vr: (Math.random() - 0.5) * 0.25,
+          s: 8 + Math.random() * 10,
+          life: 220 + Math.random() * 80,
+          c: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+    }
+
+    function drawHeartShape(x, y, size, rot, color, alpha) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+
+      const s = size / 16;
+      ctx.beginPath();
+      ctx.moveTo(0, 4*s);
+      ctx.bezierCurveTo(0, 0, -8*s, 0, -8*s, 4*s);
+      ctx.bezierCurveTo(-8*s, 10*s, 0, 12*s, 0, 16*s);
+      ctx.bezierCurveTo(0, 12*s, 8*s, 10*s, 8*s, 4*s);
+      ctx.bezierCurveTo(8*s, 0, 0, 0, 0, 4*s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ========= Background twinkles =========
+    const stars = Array.from({length: 110}, () => ({
+      x: Math.random() * innerWidth,
+      y: Math.random() * innerHeight,
+      r: Math.random() * 1.5 + 0.2,
+      a: Math.random() * 0.6 + 0.1,
+      s: Math.random() * 0.02 + 0.005
+    }));
+
+    // ========= UI logic =========
+    const hud = document.getElementById("hud");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const btnRow = document.getElementById("btnRow");
+
+    let heartFinished = false;
+    let confettiOn = false;
+
+    function dodgeNoButton() {
+      const rowRect = btnRow.getBoundingClientRect();
+      const bRect = noBtn.getBoundingClientRect();
+
+      const maxX = rowRect.width - bRect.width;
+      const maxY = 26;
+      const nx = Math.max(0, Math.min(maxX, Math.random() * maxX));
+      const ny = (Math.random() - 0.5) * maxY;
+
+      noBtn.style.transform = `translate(${nx - (bRect.left - rowRect.left)}px, ${ny}px)`;
+    }
+
+    ["mouseenter","mouseover","focus","touchstart","pointerenter","pointerdown"].forEach(evt => {
+      noBtn.addEventListener(evt, (e) => {
+        e.preventDefault?.();
+        dodgeNoButton();
+      }, { passive: false });
+    });
+
+    yesBtn.addEventListener("click", () => {
+      confettiOn = true;
+      spawnConfettiHearts(180);
+      yesBtn.textContent = "Me haces muy feliz 💖🤭";
+      document.getElementById("question").innerHTML =
+        '¡Te amooooo! 😚 Preciosa, te prometo una vida donde siempre te voy a cuidar, respetar, valorar, amar y tratarte como te mereces, eres el amor de mí vida ❤️‍🩹';
+    });
+
+    noBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        dodgeNoButton();
+      }
+    });
+
+    // ========= Photo spawner =========
+    const photoLayer = document.getElementById("photoLayer");
+    const basePhotoNames = ["Imagen 1","Imagen 2","Imagen 3","Imagen 4","Imagen 5","Imagen 6","Imagen 7"];
+    const photoExts = [".jpg", ".jpeg", ".png", ".webp"];
+    let activePhotos = 0;
+
+    function tryLoadImage(name, extIndex = 0) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const src = encodeURI(name + photoExts[extIndex]);
+        img.onload = () => resolve({ ok:true, img, src });
+        img.onerror = () => {
+          if (extIndex < photoExts.length - 1) {
+            resolve(tryLoadImage(name, extIndex + 1));
+          } else {
+            resolve({ ok:false, img:null, src:null });
+          }
+        };
+        img.src = src;
+      });
+    }
+
+    function getSafeZones() {
+      const cardRect = hud.getBoundingClientRect();
+      const pad = 22;
+      return { x1: cardRect.left - pad, y1: cardRect.top - pad, x2: cardRect.right + pad, y2: cardRect.bottom + pad };
+    }
+
+    function intersectsSafeZone(x, y, w, h, safe) {
+      const r1 = { l:x, t:y, r:x+w, b:y+h };
+      const r2 = { l:safe.x1, t:safe.y1, r:safe.x2, b:safe.y2 };
+      return !(r1.r < r2.l || r1.l > r2.r || r1.b < r2.t || r1.t > r2.b);
+    }
+
+    function randomAroundCard(frameW, frameH) {
+      const safe = getSafeZones();
+      const pad = 14;
+
+      const regions = [
+        { x1: 0, y1: 0, x2: Math.max(0, safe.x1 - 18), y2: innerHeight },
+        { x1: Math.min(innerWidth, safe.x2 + 18), y1: 0, x2: innerWidth, y2: innerHeight },
+        { x1: 0, y1: 0, x2: innerWidth, y2: Math.max(0, safe.y1 - 18) },
+        { x1: 0, y1: Math.min(innerHeight, safe.y2 + 18), x2: innerWidth, y2: innerHeight },
+      ];
+
+      for (let i = regions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [regions[i], regions[j]] = [regions[j], regions[i]];
+      }
+
+      for (const reg of regions) {
+        const wAvail = reg.x2 - reg.x1;
+        const hAvail = reg.y2 - reg.y1;
+        if (wAvail < frameW + pad*2 || hAvail < frameH + pad*2) continue;
+
+        for (let tries = 0; tries < 20; tries++) {
+          const x = reg.x1 + pad + Math.random() * (wAvail - frameW - pad*2);
+          const y = reg.y1 + pad + Math.random() * (hAvail - frameH - pad*2);
+          if (!intersectsSafeZone(x, y, frameW, frameH, safe)) return { x, y };
+        }
+      }
+
+      for (let tries = 0; tries < 60; tries++) {
+        const x = pad + Math.random() * (innerWidth - frameW - pad*2);
+        const y = pad + Math.random() * (innerHeight - frameH - pad*2);
+        if (!intersectsSafeZone(x, y, frameW, frameH, safe)) return { x, y };
+      }
+
+      return { x: pad, y: pad };
+    }
+
+    async function startSoftPhotos() {
+      const loaded = [];
+      for (const name of basePhotoNames) {
+        const res = await tryLoadImage(name);
+        if (res && res.ok) loaded.push({ name, img: res.img, src: res.src });
+      }
+      if (!loaded.length) return;
+
+      const MIN_INTERVAL = 1800;
+      const MAX_INTERVAL = 3200;
+      const MIN_LIFE = 3600;
+      const MAX_LIFE = 6200;
+      const OUT_MS = 850;
+
+      const spawnOne = () => {
+        if (activePhotos >= 2) { scheduleNext(); return; }
+
+        const item = loaded[Math.floor(Math.random() * loaded.length)];
+        const frame = document.createElement("div");
+        frame.className = "photoFrame";
+
+        const im = document.createElement("img");
+        im.alt = item.name;
+        im.src = item.src;
+
+        frame.appendChild(im);
+        photoLayer.appendChild(frame);
+        activePhotos++;
+
+        requestAnimationFrame(() => {
+          const rect = frame.getBoundingClientRect();
+          const pos = randomAroundCard(rect.width, rect.height);
+          frame.style.left = pos.x + "px";
+          frame.style.top = pos.y + "px";
+
+          requestAnimationFrame(() => frame.classList.add("show"));
+
+          const life = MIN_LIFE + Math.random() * (MAX_LIFE - MIN_LIFE);
+          setTimeout(() => {
+            frame.classList.add("hide");
+            setTimeout(() => {
+              frame.remove();
+              activePhotos = Math.max(0, activePhotos - 1);
+            }, OUT_MS + 60);
+          }, life);
+        });
+
+        scheduleNext();
+      };
+
+      const scheduleNext = () => {
+        const nextIn = MIN_INTERVAL + Math.random() * (MAX_INTERVAL - MIN_INTERVAL);
+        setTimeout(spawnOne, nextIn);
+      };
+
+      spawnOne();
+    }
+
+    // ========= Music autoplay (requested) =========
+    const bgMusic = document.getElementById("bgMusic");
+    bgMusic.volume = 0.55;
+
+    // Try immediately, and keep retrying on any first interaction (mobile browsers often require it).
+    const tryAutoplay = () => {
+      bgMusic.play().catch(() => {});
+    };
+    tryAutoplay();
+    addEventListener("pointerdown", tryAutoplay, { passive: true });
+    addEventListener("keydown", tryAutoplay, { passive: true });
+
+    // ========= Animation loop =========
+    function drawStars() {
+      for (const st of stars) {
+        st.a += st.s;
+        const a = 0.15 + (Math.sin(st.a) * 0.25 + 0.25);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawNeonParticle(p) {
+      p.wob += 0.02;
+
+      const sway = Math.sin(performance.now() * 0.001 + p.phase) * 1.6;
+      p.x += ((p.tx + sway) - p.x) * 0.08;
+      p.y += (p.ty - p.y) * 0.08;
+
+      p.a = Math.min(1, p.a + p.va);
+
+      const pulse = 0.75 + Math.sin(performance.now() * 0.004 + p.wob) * 0.25;
+      const glow = 10 * pulse;
+
+      ctx.save();
+      ctx.globalAlpha = p.a * pulse;
+
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = "rgba(255, 27, 77, 0.95)";
+      ctx.fillStyle = "rgba(255, 27, 77, 0.95)";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = p.a * 0.9;
+      ctx.fillStyle = "rgba(255, 200, 220, 0.85)";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.6, p.r * 0.45), 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    function updateConfetti() {
+      for (let i = confetti.length - 1; i >= 0; i--) {
+        const c = confetti[i];
+        c.vy += c.g;
+        c.x += c.vx;
+        c.y += c.vy;
+        c.rot += c.vr;
+        c.life -= 1;
+
+        const alpha = Math.max(0, Math.min(1, c.life / 80));
+        drawHeartShape(c.x, c.y, c.s, c.rot, c.c, alpha);
+
+        if (c.y > innerHeight + 60 || c.life <= 0) confetti.splice(i, 1);
+      }
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+      drawStars();
+
+      if (!heartFinished) {
+        for (let k = 0; k < REVEAL_SPEED && revealIndex < MAX_HEART; k++) {
+          addHeartParticle(revealIndex++);
+        }
+        if (revealIndex >= MAX_HEART) {
+          heartFinished = true;
+          setTimeout(() => {
+            hud.classList.add("show");
+            hud.setAttribute("aria-hidden", "false");
+            startSoftPhotos();
+          }, 450);
+        }
+      }
+
+      for (const p of heartParticles) drawNeonParticle(p);
+
+      if (confettiOn || confetti.length) updateConfetti();
+
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>
